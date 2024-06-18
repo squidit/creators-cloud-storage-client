@@ -77,11 +77,6 @@ export class CreatorsCloudStorageClient {
 
       const response = await this.s3Client.send(command)
 
-      if (!response) {
-        throw new Error('No response')
-        // TODO: logar no squid error
-      }
-
       console.debug(`Download of file ${fileName} from bucket ${bucketName} successful.`)
       return response
     } catch (error) {
@@ -96,9 +91,6 @@ export class CreatorsCloudStorageClient {
       throw new Error('No body in file content')
     }
 
-    if (!downloadResult.Body) {
-      throw new Error('No body in file content')
-    }
 
     let jsonString: string
     if (downloadResult.ContentEncoding === 'gzip') {
