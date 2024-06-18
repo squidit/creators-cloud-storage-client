@@ -46,9 +46,6 @@
     > Dessa forma, os as bibliotecas locais são incluidas como dependências no gerenciador de pacotes (npm, yarn, pnpm etc). Isso permite que, no código, você possa fazer uso das bibliotecas através de um require { SquidError, SquidLogger } from 'squid-observability' sem se preocupar com o diretório onde essas bibliotecas estão instaladas. Além disso, o gerenciador de pacotes garante que, caso as bibliotecas instaladas via submódulos tenham dependências em comum com sua aplicação, somente uma cópia do código fonte dessas bibliotecas será vinculada a ela, consequentemente reduzindo o tamanho final da aplicação.  
     > Outra vantagem de vincular o submódulo com o package.json é transferir a responsabilidade de instalar as dependencias dos submódulos ao package manager. Ou seja, se uma biblioteca em submódulo fizer uso da lodash, o npm ou yarn da aplicação pai é quem irá instalar essa dependência ao rodarmos npm install.
 
-## Variáveis de ambiente:
-TBW
-
 
 ## Utilização: Sem injeção de dependência
 1. Na inicialização da sua aplicação, inclua o client e inicialize-o com as variáveis de ambiente:
@@ -58,14 +55,18 @@ TBW
     ...
 
     CreatorsCloudStorageClient.init(
-      GCE_CLUSTER_PROJECT,      // variável de ambiente contendo o nome do projeto do GCP
-      GCE_AUTH_JSON_FILENAME,   // variável de ambiente contendo o nome do arquivo de credenciais
-      SquidLogger,              // Instância do SquidLogger
-      SquidError,               // Instância do SquidError
+      CLOUD_STORAGE_CLIENT_REGION,            // variável de ambiente contendo a região da cloud
+      CLOUD_STORAGE_CLIENT_ACCESS_KEY_ID,     // variável de ambiente contendo o id da service account
+      CLOUD_STORAGE_CLIENT_SECRET_ACCESS_KEY  // variável de ambiente contendo o secret da service account
+      SquidLogger,                            // Instância do SquidLogger
+      SquidError,                             // Instância do SquidError
     )
     ```
 
-TBW
+1. Depois, basta utilizar o client para download e upload de arquivos:
+    ```ts
+    await CreatorsCloudStorageClient.downloadJson(...)
+    ```
 
 ## Utilização: Com injeção de dependência por tsyringe
 1. Na inicialização da sua aplicação, inclua o client e inicialize-o com as variáveis de ambiente:
@@ -75,10 +76,11 @@ TBW
     ...
 
     CreatorsCloudStorageClient.init(
-      GCE_CLUSTER_PROJECT,      // variável de ambiente contendo o nome do projeto do GCP
-      GCE_AUTH_JSON_FILENAME,   // variável de ambiente contendo o nome do arquivo de credenciais
-      SquidLogger,              // Instância do SquidLogger
-      SquidError,               // Instância do SquidError
+      CLOUD_STORAGE_CLIENT_REGION,            // variável de ambiente contendo a região da cloud
+      CLOUD_STORAGE_CLIENT_ACCESS_KEY_ID,     // variável de ambiente contendo o id da service account
+      CLOUD_STORAGE_CLIENT_SECRET_ACCESS_KEY  // variável de ambiente contendo o secret da service account
+      SquidLogger,                            // Instância do SquidLogger
+      SquidError,                             // Instância do SquidError
     )
     ```
 1. Após a inicialização, registre a instância no container de injeção de dependência:
@@ -94,7 +96,7 @@ TBW
 
     ...
 
-    await this.creatorsCloudStorageClient.TBW()
+    await this.creatorsCloudStorageClient.downloadJson(...)
     ```
 
 
@@ -105,23 +107,25 @@ Entregue o valor da instância como resultado da factory:
     ```ts
     @Global()
     @Module({
-      providers: [{
-        provide: 'CreatorsCloudStorageClient',
-        useFactory: (configService: ConfigService<EnvironmentVariables>) => {
-          CreatorsCloudStorageClient.init(
-            configService.getOrThrow('GCE_CLUSTER_PROJECT', { infer: true }),
-            configService.getOrThrow('GCE_AUTH_JSON_FILENAME', { infer: true }),
-            SquidLogger,
-            SquidError
-          )
-          return CreatorsCloudStorageClient.getInstance()
-        },
-        inject: [ConfigService]
-      }
+      providers: [
+        {
+          provide: 'CreatorsCloudStorageClient',
+          useFactory: (configService: ConfigService<EnvironmentVariables>) => {
+            CreatorsCloudStorageClient.init(
+              configService.getOrThrow('CLOUD_STORAGE_CLIENT_REGION'),
+              configService.getOrThrow('CLOUD_STORAGE_CLIENT_ACCESS_KEY_ID'),
+              configService.getOrThrow('CLOUD_STORAGE_CLIENT_SECRET_ACCESS_KEY'),
+              SquidLogger,
+              SquidError
+            )
+            return CreatorsCloudStorageClient.getInstance()
+          },
+          inject: [ConfigService]
+        }
       ],
       exports: ['CreatorsCloudStorageClient']
     })
-    export class CreatorsCloudStorageClient {}
+    export class CloudStorageModule { }
     ```
 
 1. Para enviar uma notificação, obtenha o client do container e utilize a instância obtida:
@@ -132,5 +136,5 @@ Entregue o valor da instância como resultado da factory:
 
     ...
 
-    await this.creatorsCloudStorageClient.TBW()
+    await this.creatorsCloudStorageClient.downloadJson(...)
     ```
