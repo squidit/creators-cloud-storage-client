@@ -10,6 +10,7 @@ interface ErrorConverter {
     Create: (settings: Record<string, unknown>, originalError: unknown) => Error;
 }
 declare class CreatorsCloudStorageClient {
+    private readonly region;
     private static instance;
     private readonly loggerInstance;
     private readonly errorConverter;
@@ -22,6 +23,13 @@ declare class CreatorsCloudStorageClient {
     }): Promise<void>;
     downloadFile(bucketName: string, fileName: string): Promise<GetObjectCommandOutput>;
     downloadJson<T extends z.ZodType>(bucketName: string, fileName: string, schema: T): Promise<z.infer<T>>;
+    /**
+     * Uploads a file from a URL to the specified bucket. A file stream is piped from the URL to the S3 bucket.
+     * @returns The URL of the uploaded file.
+     */
+    uploadFromUrl(bucketName: string, fileName: string, url: string, options?: {
+        overrideContentType?: string;
+    }): Promise<string>;
 }
 
 export { CreatorsCloudStorageClient };

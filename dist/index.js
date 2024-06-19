@@ -1,10 +1,12 @@
 "use strict";
+var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __defProps = Object.defineProperties;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getOwnPropSymbols = Object.getOwnPropertySymbols;
+var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __propIsEnum = Object.prototype.propertyIsEnumerable;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
@@ -32,6 +34,14 @@ var __copyProps = (to, from, except, desc) => {
   }
   return to;
 };
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var __async = (__this, __arguments, generator) => {
   return new Promise((resolve, reject) => {
@@ -62,10 +72,13 @@ __export(src_exports, {
 });
 module.exports = __toCommonJS(src_exports);
 var import_client_s3 = require("@aws-sdk/client-s3");
+var import_lib_storage = require("@aws-sdk/lib-storage");
+var import_axios = __toESM(require("axios"));
+var import_mime = __toESM(require("mime"));
 var import_util = require("util");
 var import_zlib = require("zlib");
 
-// ../../node_modules/.pnpm/zod@3.23.6/node_modules/zod/lib/index.mjs
+// ../../node_modules/.pnpm/zod@3.23.8/node_modules/zod/lib/index.mjs
 var util;
 (function(util2) {
   util2.assertEqual = (val) => val;
@@ -3880,6 +3893,7 @@ var z = /* @__PURE__ */ Object.freeze({
 var gzip = (0, import_util.promisify)(import_zlib.gzip);
 var CreatorsCloudStorageClient = class _CreatorsCloudStorageClient {
   constructor(region, accessKeyId, secretAccessKey, loggerInstance, errorConverter) {
+    this.region = region;
     this.loggerInstance = loggerInstance;
     this.errorConverter = errorConverter;
     this.s3Client = new import_client_s3.S3Client({
@@ -3929,9 +3943,6 @@ var CreatorsCloudStorageClient = class _CreatorsCloudStorageClient {
         };
         const command = new import_client_s3.GetObjectCommand(params);
         const response = yield this.s3Client.send(command);
-        if (!response) {
-          throw new Error("No response");
-        }
         console.debug(`Download of file ${fileName} from bucket ${bucketName} successful.`);
         return response;
       } catch (error) {
@@ -3943,9 +3954,6 @@ var CreatorsCloudStorageClient = class _CreatorsCloudStorageClient {
   downloadJson(bucketName, fileName, schema) {
     return __async(this, null, function* () {
       const downloadResult = yield this.downloadFile(bucketName, fileName);
-      if (!downloadResult.Body) {
-        throw new Error("No body in file content");
-      }
       if (!downloadResult.Body) {
         throw new Error("No body in file content");
       }
@@ -3970,6 +3978,36 @@ var CreatorsCloudStorageClient = class _CreatorsCloudStorageClient {
       }
       const json = JSON.parse(jsonString);
       return schema.parse(json);
+    });
+  }
+  /**
+   * Uploads a file from a URL to the specified bucket. A file stream is piped from the URL to the S3 bucket.
+   * @returns The URL of the uploaded file.
+   */
+  uploadFromUrl(_0, _1, _2) {
+    return __async(this, arguments, function* (bucketName, fileName, url, options = {}) {
+      var _a, _b;
+      const originalFileStreamResponse = yield (0, import_axios.default)({
+        method: "get",
+        url,
+        responseType: "stream"
+      });
+      const contentType = (_b = (_a = options.overrideContentType) != null ? _a : originalFileStreamResponse.headers["content-type"]) != null ? _b : "application/octet-stream";
+      const extension = import_mime.default.getExtension(contentType);
+      const fileNameWithExtension = `${fileName}.${extension}`;
+      const params = {
+        Bucket: bucketName,
+        Key: fileNameWithExtension,
+        Body: originalFileStreamResponse.data,
+        ACL: "public-read",
+        ContentType: contentType
+      };
+      const upload = new import_lib_storage.Upload({
+        client: this.s3Client,
+        params
+      });
+      yield upload.done();
+      return `https://${bucketName}.s3.${this.region}.amazonaws.com/${fileNameWithExtension}`;
     });
   }
 };

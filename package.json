@@ -12,7 +12,8 @@
     "@aws-sdk/client-s3": "^3.598.0",
     "@aws-sdk/lib-storage": "^3.600.0",
     "axios": "^1.7.2",
-    "czod": "npm:zod@^3.23.8"
+    "czod": "npm:zod@^3.23.8",
+    "mime": "^4.0.3"
   },
   "devDependencies": {
     "@types/node": "^20.12.12",

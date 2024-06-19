@@ -40,10 +40,13 @@ var __async = (__this, __arguments, generator) => {
 
 // src/index.ts
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { Upload } from "@aws-sdk/lib-storage";
+import axios from "axios";
+import mime from "mime";
 import { promisify } from "util";
 import { gzip as callbackGzip, createGunzip } from "zlib";
 
-// ../../node_modules/.pnpm/zod@3.23.6/node_modules/zod/lib/index.mjs
+// ../../node_modules/.pnpm/zod@3.23.8/node_modules/zod/lib/index.mjs
 var util;
 (function(util2) {
   util2.assertEqual = (val) => val;
@@ -3858,6 +3861,7 @@ var z = /* @__PURE__ */ Object.freeze({
 var gzip = promisify(callbackGzip);
 var CreatorsCloudStorageClient = class _CreatorsCloudStorageClient {
   constructor(region, accessKeyId, secretAccessKey, loggerInstance, errorConverter) {
+    this.region = region;
     this.loggerInstance = loggerInstance;
     this.errorConverter = errorConverter;
     this.s3Client = new S3Client({
@@ -3907,9 +3911,6 @@ var CreatorsCloudStorageClient = class _CreatorsCloudStorageClient {
         };
         const command = new GetObjectCommand(params);
         const response = yield this.s3Client.send(command);
-        if (!response) {
-          throw new Error("No response");
-        }
         console.debug(`Download of file ${fileName} from bucket ${bucketName} successful.`);
         return response;
       } catch (error) {
@@ -3921,9 +3922,6 @@ var CreatorsCloudStorageClient = class _CreatorsCloudStorageClient {
   downloadJson(bucketName, fileName, schema) {
     return __async(this, null, function* () {
       const downloadResult = yield this.downloadFile(bucketName, fileName);
-      if (!downloadResult.Body) {
-        throw new Error("No body in file content");
-      }
       if (!downloadResult.Body) {
         throw new Error("No body in file content");
       }
@@ -3948,6 +3946,36 @@ var CreatorsCloudStorageClient = class _CreatorsCloudStorageClient {
       }
       const json = JSON.parse(jsonString);
       return schema.parse(json);
+    });
+  }
+  /**
+   * Uploads a file from a URL to the specified bucket. A file stream is piped from the URL to the S3 bucket.
+   * @returns The URL of the uploaded file.
+   */
+  uploadFromUrl(_0, _1, _2) {
+    return __async(this, arguments, function* (bucketName, fileName, url, options = {}) {
+      var _a, _b;
+      const originalFileStreamResponse = yield axios({
+        method: "get",
+        url,
+        responseType: "stream"
+      });
+      const contentType = (_b = (_a = options.overrideContentType) != null ? _a : originalFileStreamResponse.headers["content-type"]) != null ? _b : "application/octet-stream";
+      const extension = mime.getExtension(contentType);
+      const fileNameWithExtension = `${fileName}.${extension}`;
+      const params = {
+        Bucket: bucketName,
+        Key: fileNameWithExtension,
+        Body: originalFileStreamResponse.data,
+        ACL: "public-read",
+        ContentType: contentType
+      };
+      const upload = new Upload({
+        client: this.s3Client,
+        params
+      });
+      yield upload.done();
+      return `https://${bucketName}.s3.${this.region}.amazonaws.com/${fileNameWithExtension}`;
     });
   }
 };

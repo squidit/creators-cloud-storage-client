@@ -3,9 +3,11 @@ import { Upload } from '@aws-sdk/lib-storage'
 import { type NodeJsClient } from '@smithy/types'
 import axios from 'axios'
 import { type z as cz } from 'czod'
+import mime from 'mime'
 import { promisify } from 'util'
 import { gzip as callbackGzip, createGunzip } from 'zlib'
 
+// TODO: falar para colocar o modulo criado no appmodule no caso de nestjs
 const gzip = promisify(callbackGzip)
 
 interface Logger {
@@ -23,7 +25,7 @@ export class CreatorsCloudStorageClient {
   private readonly errorConverter: ErrorConverter
   private readonly s3Client: NodeJsClient<S3Client>
 
-  private constructor (region: string, accessKeyId: string, secretAccessKey: string, loggerInstance: Logger, errorConverter: ErrorConverter) {
+  private constructor (private readonly region: string, accessKeyId: string, secretAccessKey: string, loggerInstance: Logger, errorConverter: ErrorConverter) {
     this.loggerInstance = loggerInstance
     this.errorConverter = errorConverter
     this.s3Client = new S3Client({
@@ -125,25 +127,32 @@ export class CreatorsCloudStorageClient {
    * Uploads a file from a URL to the specified bucket. A file stream is piped from the URL to the S3 bucket.
    * @returns The URL of the uploaded file.
    */
-  public async uploadFromUrl (bucketName: string, fileName: string, url: string): Promise<string> {
+  public async uploadFromUrl (bucketName: string, fileName: string, url: string, options: { overrideContentType?: string } = {}): Promise<string> {
     const originalFileStreamResponse = await axios({
       method: 'get',
       url,
       responseType: 'stream'
     })
-    // Create an Upload
+
+    const contentType = options.overrideContentType ?? originalFileStreamResponse.headers['content-type'] as string ?? 'application/octet-stream'
+    // TODO: fazer falhar se não encontrar content type?
+    const extension = mime.getExtension(contentType)
+    const fileNameWithExtension = `${fileName}.${extension}`
+    const params: PutObjectCommandInput = {
+      Bucket: bucketName,
+      Key: fileNameWithExtension,
+      Body: originalFileStreamResponse.data,
+      ACL: 'public-read',
+      ContentType: contentType
+    }
     const upload = new Upload({
       client: this.s3Client,
-      params: {
-        Bucket: bucketName,
-        Key: fileName,
-        Body: originalFileStreamResponse.data
-      }
+      params
     })
 
     await upload.done()
 
-    return 'PLACEHOLDER'
+    return `https://${bucketName}.s3.${this.region}.amazonaws.com/${fileNameWithExtension}`
   }
 }
 
