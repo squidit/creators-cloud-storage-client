@@ -1,8 +1,11 @@
 import { GetObjectCommand, PutObjectCommand, S3Client, type GetObjectCommandInput, type GetObjectCommandOutput, type PutObjectCommandInput } from '@aws-sdk/client-s3'
+import { Upload } from '@aws-sdk/lib-storage'
 import { type NodeJsClient } from '@smithy/types'
+import axios from 'axios'
 import { type z as cz } from 'czod'
 import { promisify } from 'util'
 import { gzip as callbackGzip, createGunzip } from 'zlib'
+
 const gzip = promisify(callbackGzip)
 
 interface Logger {
@@ -91,7 +94,6 @@ export class CreatorsCloudStorageClient {
       throw new Error('No body in file content')
     }
 
-
     let jsonString: string
     if (downloadResult.ContentEncoding === 'gzip') {
       const fileBuffer = Buffer.from(await downloadResult.Body.transformToByteArray())
@@ -117,6 +119,31 @@ export class CreatorsCloudStorageClient {
     }
     const json = JSON.parse(jsonString)
     return schema.parse(json)
+  }
+
+  /**
+   * Uploads a file from a URL to the specified bucket. A file stream is piped from the URL to the S3 bucket.
+   * @returns The URL of the uploaded file.
+   */
+  public async uploadFromUrl (bucketName: string, fileName: string, url: string): Promise<string> {
+    const originalFileStreamResponse = await axios({
+      method: 'get',
+      url,
+      responseType: 'stream'
+    })
+    // Create an Upload
+    const upload = new Upload({
+      client: this.s3Client,
+      params: {
+        Bucket: bucketName,
+        Key: fileName,
+        Body: originalFileStreamResponse.data
+      }
+    })
+
+    await upload.done()
+
+    return 'PLACEHOLDER'
   }
 }
 

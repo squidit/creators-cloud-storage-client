@@ -3,6 +3,7 @@ module.exports = {
     es2023: true,
     node: true
   },
+  root: true,
   ignorePatterns: ['**/libraries/**'],
   extends: 'standard-with-typescript',
   overrides: [
