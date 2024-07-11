@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.598.0",
+    "@aws-sdk/s3-request-presigner": "^3.614.0",
     "czod": "npm:zod@^3.23.8"
   },
   "devDependencies": {

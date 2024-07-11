@@ -1,4 +1,5 @@
 import { GetObjectCommand, PutObjectCommand, S3Client, type GetObjectCommandInput, type GetObjectCommandOutput, type PutObjectCommandInput } from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { type NodeJsClient } from '@smithy/types'
 import { type z as cz } from 'czod'
 import { promisify } from 'util'
@@ -117,6 +118,17 @@ export class CreatorsCloudStorageClient {
     }
     const json = JSON.parse(jsonString)
     return schema.parse(json)
+  }
+
+  public async createSignedUploadUrl (bucketName: string, fileName: string, expirationInSeconds: number): Promise<string> {
+      const command = new GetObjectCommand({
+        Bucket: bucketName,
+        Key: fileName
+      })
+
+      const signedUrl = getSignedUrl(this.s3Client, command, { expiresIn: expirationInSeconds })
+
+      return signedUrl
   }
 }
 
