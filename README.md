@@ -127,7 +127,7 @@ Entregue o valor da instância como resultado da factory:
     })
     export class CloudStorageModule { }
     ```
-
+<!-- TODO: falar sobre criar variáveis de ambiente -->
 1. Para enviar uma notificação, obtenha o client do container e utilize a instância obtida:
     ```ts
     constructor(
