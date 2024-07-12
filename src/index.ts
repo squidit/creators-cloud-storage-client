@@ -17,11 +17,9 @@ interface ErrorConverter {
 
 export class CreatorsCloudStorageClient {
   private static instance: CreatorsCloudStorageClient
-  private readonly loggerInstance: Logger
-  private readonly errorConverter: ErrorConverter
   private readonly s3Client: NodeJsClient<S3Client>
 
-  private constructor (region: string, accessKeyId: string, secretAccessKey: string, loggerInstance: Logger, errorConverter: ErrorConverter) {
+  private constructor (private readonly region: string, accessKeyId: string, secretAccessKey: string, private readonly loggerInstance: Logger, private readonly errorConverter: ErrorConverter) {
     this.loggerInstance = loggerInstance
     this.errorConverter = errorConverter
     this.s3Client = new S3Client({
@@ -120,23 +118,39 @@ export class CreatorsCloudStorageClient {
     return schema.parse(json)
   }
 
-  public async createSignedUploadUrl (bucketName: string, fileName: string, expirationInSeconds: number): Promise<string> {
-      const command = new PutObjectCommand({
+  public async createSignedUploadUrl (bucketName: string, directory: string, fileName: string, contentType: ContentType, expirationInSeconds: number): Promise<{signedUrl: string, publicUrl: string}> {
+    const extension = this.translateContentTypeToExtension(contentType)
+    const command = new PutObjectCommand({
         Bucket: bucketName,
-        Key: fileName
+        Key: `${directory}/${fileName}.${extension}`,
       })
 
-      return getSignedUrl(this.s3Client, command, { expiresIn: expirationInSeconds })
+      return {
+        signedUrl: await getSignedUrl(this.s3Client, command, { expiresIn: expirationInSeconds }),
+        publicUrl: `https://${bucketName}.s3.${this.region}.amazonaws.com/${directory}/${fileName}.${extension}`
+      }
   }
 
-  public async createSignedDownloadUrl (bucketName: string, fileName: string, expirationInSeconds: number): Promise<string> {
+  public async createSignedDownloadUrl (bucketName: string, directory: string, fileName: string, expirationInSeconds: number): Promise<string> {
     const command = new GetObjectCommand({
       Bucket: bucketName,
-      Key: fileName
+      Key: `${directory}/${fileName}`
     })
 
     return getSignedUrl(this.s3Client, command, { expiresIn: expirationInSeconds })
   }
+
+  private translateContentTypeToExtension (contentType: ContentType): string {
+    return {
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/png': 'png',
+      'application/pdf': 'pdf'
+    }[contentType]
+  }
 }
+
+const possibleContentTypes = ['image/jpg', 'image/jpeg', 'image/png', 'application/pdf'] as const
+export type ContentType = typeof possibleContentTypes[number]
 
 export { z as cz } from 'zod'

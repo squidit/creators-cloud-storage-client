@@ -3881,6 +3881,9 @@ var z = /* @__PURE__ */ Object.freeze({
 var gzip = (0, import_util.promisify)(import_zlib.gzip);
 var CreatorsCloudStorageClient = class _CreatorsCloudStorageClient {
   constructor(region, accessKeyId, secretAccessKey, loggerInstance, errorConverter) {
+    this.region = region;
+    this.loggerInstance = loggerInstance;
+    this.errorConverter = errorConverter;
     this.loggerInstance = loggerInstance;
     this.errorConverter = errorConverter;
     this.s3Client = new import_client_s3.S3Client({
@@ -3967,23 +3970,35 @@ var CreatorsCloudStorageClient = class _CreatorsCloudStorageClient {
       return schema.parse(json);
     });
   }
-  createSignedUploadUrl(bucketName, fileName, expirationInSeconds) {
+  createSignedUploadUrl(bucketName, directory, fileName, contentType, expirationInSeconds) {
     return __async(this, null, function* () {
+      const extension = this.translateContentTypeToExtension(contentType);
       const command = new import_client_s3.PutObjectCommand({
         Bucket: bucketName,
-        Key: fileName
+        Key: `${directory}/${fileName}.${extension}`
+      });
+      return {
+        signedUrl: yield (0, import_s3_request_presigner.getSignedUrl)(this.s3Client, command, { expiresIn: expirationInSeconds }),
+        publicUrl: `https://${bucketName}.s3.${this.region}.amazonaws.com/${directory}/${fileName}.${extension}`
+      };
+    });
+  }
+  createSignedDownloadUrl(bucketName, directory, fileName, expirationInSeconds) {
+    return __async(this, null, function* () {
+      const command = new import_client_s3.GetObjectCommand({
+        Bucket: bucketName,
+        Key: `${directory}/${fileName}`
       });
       return (0, import_s3_request_presigner.getSignedUrl)(this.s3Client, command, { expiresIn: expirationInSeconds });
     });
   }
-  createSignedDownloadUrl(bucketName, fileName, expirationInSeconds) {
-    return __async(this, null, function* () {
-      const command = new import_client_s3.GetObjectCommand({
-        Bucket: bucketName,
-        Key: fileName
-      });
-      return (0, import_s3_request_presigner.getSignedUrl)(this.s3Client, command, { expiresIn: expirationInSeconds });
-    });
+  translateContentTypeToExtension(contentType) {
+    return {
+      "image/jpeg": "jpg",
+      "image/jpg": "jpg",
+      "image/png": "png",
+      "application/pdf": "pdf"
+    }[contentType];
   }
 };
 // Annotate the CommonJS export names for ESM import in node:

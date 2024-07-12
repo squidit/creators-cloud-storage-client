@@ -10,9 +10,10 @@ interface ErrorConverter {
     Create: (settings: Record<string, unknown>, originalError: unknown) => Error;
 }
 declare class CreatorsCloudStorageClient {
-    private static instance;
+    private readonly region;
     private readonly loggerInstance;
     private readonly errorConverter;
+    private static instance;
     private readonly s3Client;
     private constructor();
     static getInstance(): CreatorsCloudStorageClient;
@@ -22,8 +23,14 @@ declare class CreatorsCloudStorageClient {
     }): Promise<void>;
     downloadFile(bucketName: string, fileName: string): Promise<GetObjectCommandOutput>;
     downloadJson<T extends z.ZodType>(bucketName: string, fileName: string, schema: T): Promise<z.infer<T>>;
-    createSignedUploadUrl(bucketName: string, fileName: string, expirationInSeconds: number): Promise<string>;
-    createSignedDownloadUrl(bucketName: string, fileName: string, expirationInSeconds: number): Promise<string>;
+    createSignedUploadUrl(bucketName: string, directory: string, fileName: string, contentType: ContentType, expirationInSeconds: number): Promise<{
+        signedUrl: string;
+        publicUrl: string;
+    }>;
+    createSignedDownloadUrl(bucketName: string, directory: string, fileName: string, expirationInSeconds: number): Promise<string>;
+    private translateContentTypeToExtension;
 }
+declare const possibleContentTypes: readonly ["image/jpg", "image/jpeg", "image/png", "application/pdf"];
+type ContentType = typeof possibleContentTypes[number];
 
-export { CreatorsCloudStorageClient };
+export { type ContentType, CreatorsCloudStorageClient };
