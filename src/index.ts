@@ -125,9 +125,10 @@ export class CreatorsCloudStorageClient {
         Key: `${directory}/${fileName}.${extension}`,
       })
 
+      const signedUrl = await getSignedUrl(this.s3Client, command, { expiresIn: expirationInSeconds })
       return {
-        signedUrl: await getSignedUrl(this.s3Client, command, { expiresIn: expirationInSeconds }),
-        publicUrl: `https://${bucketName}.s3.${this.region}.amazonaws.com/${directory}/${fileName}.${extension}`
+        signedUrl,
+        publicUrl: this.stripQueryString(signedUrl)
       }
   }
 
@@ -147,6 +148,12 @@ export class CreatorsCloudStorageClient {
       'image/png': 'png',
       'application/pdf': 'pdf'
     }[contentType]
+  }
+
+  private stripQueryString(urlString: string): string {
+    const url = new URL(urlString);
+    url.search = '';
+    return url.toString();
   }
 }
 
