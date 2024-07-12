@@ -121,14 +121,21 @@ export class CreatorsCloudStorageClient {
   }
 
   public async createSignedUploadUrl (bucketName: string, fileName: string, expirationInSeconds: number): Promise<string> {
-      const command = new GetObjectCommand({
+      const command = new PutObjectCommand({
         Bucket: bucketName,
         Key: fileName
       })
 
-      const signedUrl = getSignedUrl(this.s3Client, command, { expiresIn: expirationInSeconds })
+      return getSignedUrl(this.s3Client, command, { expiresIn: expirationInSeconds })
+  }
 
-      return signedUrl
+  public async createSignedDownloadUrl (bucketName: string, fileName: string, expirationInSeconds: number): Promise<string> {
+    const command = new GetObjectCommand({
+      Bucket: bucketName,
+      Key: fileName
+    })
+
+    return getSignedUrl(this.s3Client, command, { expiresIn: expirationInSeconds })
   }
 }
 

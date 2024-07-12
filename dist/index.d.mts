@@ -23,6 +23,7 @@ declare class CreatorsCloudStorageClient {
     downloadFile(bucketName: string, fileName: string): Promise<GetObjectCommandOutput>;
     downloadJson<T extends z.ZodType>(bucketName: string, fileName: string, schema: T): Promise<z.infer<T>>;
     createSignedUploadUrl(bucketName: string, fileName: string, expirationInSeconds: number): Promise<string>;
+    createSignedDownloadUrl(bucketName: string, fileName: string, expirationInSeconds: number): Promise<string>;
 }
 
 export { CreatorsCloudStorageClient };

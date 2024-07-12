@@ -3969,12 +3969,20 @@ var CreatorsCloudStorageClient = class _CreatorsCloudStorageClient {
   }
   createSignedUploadUrl(bucketName, fileName, expirationInSeconds) {
     return __async(this, null, function* () {
+      const command = new import_client_s3.PutObjectCommand({
+        Bucket: bucketName,
+        Key: fileName
+      });
+      return (0, import_s3_request_presigner.getSignedUrl)(this.s3Client, command, { expiresIn: expirationInSeconds });
+    });
+  }
+  createSignedDownloadUrl(bucketName, fileName, expirationInSeconds) {
+    return __async(this, null, function* () {
       const command = new import_client_s3.GetObjectCommand({
         Bucket: bucketName,
         Key: fileName
       });
-      const signedUrl = (0, import_s3_request_presigner.getSignedUrl)(this.s3Client, command, { expiresIn: expirationInSeconds });
-      return signedUrl;
+      return (0, import_s3_request_presigner.getSignedUrl)(this.s3Client, command, { expiresIn: expirationInSeconds });
     });
   }
 };
