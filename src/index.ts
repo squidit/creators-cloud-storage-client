@@ -90,7 +90,6 @@ export class CreatorsCloudStorageClient {
       throw new Error('No body in file content')
     }
 
-
     let jsonString: string
     if (downloadResult.ContentEncoding === 'gzip') {
       const fileBuffer = Buffer.from(await downloadResult.Body.transformToByteArray())
@@ -118,18 +117,18 @@ export class CreatorsCloudStorageClient {
     return schema.parse(json)
   }
 
-  public async createSignedUploadUrl (bucketName: string, directory: string, fileName: string, contentType: ContentType, expirationInSeconds: number): Promise<{signedUrl: string, publicUrl: string}> {
+  public async createSignedUploadUrl (bucketName: string, directory: string, fileName: string, contentType: ContentType, expirationInSeconds: number): Promise<{ signedUrl: string, publicUrl: string }> {
     const extension = this.translateContentTypeToExtension(contentType)
     const command = new PutObjectCommand({
-        Bucket: bucketName,
-        Key: `${directory}/${fileName}.${extension}`,
-      })
+      Bucket: bucketName,
+      Key: `${directory}/${fileName}.${extension}`
+    })
 
-      const signedUrl = await getSignedUrl(this.s3Client, command, { expiresIn: expirationInSeconds })
-      return {
-        signedUrl,
-        publicUrl: this.stripQueryString(signedUrl)
-      }
+    const signedUrl = await getSignedUrl(this.s3Client, command, { expiresIn: expirationInSeconds })
+    return {
+      signedUrl,
+      publicUrl: this.stripQueryString(signedUrl)
+    }
   }
 
   public async createSignedDownloadUrl (bucketName: string, directory: string, fileName: string, expirationInSeconds: number): Promise<string> {
@@ -138,7 +137,7 @@ export class CreatorsCloudStorageClient {
       Key: `${directory}/${fileName}`
     })
 
-    return getSignedUrl(this.s3Client, command, { expiresIn: expirationInSeconds })
+    return await getSignedUrl(this.s3Client, command, { expiresIn: expirationInSeconds })
   }
 
   private translateContentTypeToExtension (contentType: ContentType): string {
@@ -150,10 +149,10 @@ export class CreatorsCloudStorageClient {
     }[contentType]
   }
 
-  private stripQueryString(urlString: string): string {
-    const url = new URL(urlString);
-    url.search = '';
-    return url.toString();
+  private stripQueryString (urlString: string): string {
+    const url = new URL(urlString)
+    url.search = ''
+    return url.toString()
   }
 }
 
