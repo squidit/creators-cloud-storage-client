@@ -1,4 +1,5 @@
 import { GetObjectCommand, PutObjectCommand, S3Client, type GetObjectCommandInput, type GetObjectCommandOutput, type PutObjectCommandInput } from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { type NodeJsClient } from '@smithy/types'
 import { type z as cz } from 'czod'
 import { promisify } from 'util'
@@ -16,11 +17,9 @@ interface ErrorConverter {
 
 export class CreatorsCloudStorageClient {
   private static instance: CreatorsCloudStorageClient
-  private readonly loggerInstance: Logger
-  private readonly errorConverter: ErrorConverter
   private readonly s3Client: NodeJsClient<S3Client>
 
-  private constructor (region: string, accessKeyId: string, secretAccessKey: string, loggerInstance: Logger, errorConverter: ErrorConverter) {
+  private constructor (private readonly region: string, accessKeyId: string, secretAccessKey: string, private readonly loggerInstance: Logger, private readonly errorConverter: ErrorConverter) {
     this.loggerInstance = loggerInstance
     this.errorConverter = errorConverter
     this.s3Client = new S3Client({
@@ -91,7 +90,6 @@ export class CreatorsCloudStorageClient {
       throw new Error('No body in file content')
     }
 
-
     let jsonString: string
     if (downloadResult.ContentEncoding === 'gzip') {
       const fileBuffer = Buffer.from(await downloadResult.Body.transformToByteArray())
@@ -118,6 +116,47 @@ export class CreatorsCloudStorageClient {
     const json = JSON.parse(jsonString)
     return schema.parse(json)
   }
+
+  public async createSignedUploadUrl (bucketName: string, directory: string, fileName: string, contentType: ContentType, expirationInSeconds: number): Promise<{ signedUrl: string, publicUrl: string }> {
+    const extension = this.translateContentTypeToExtension(contentType)
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: `${directory}/${fileName}.${extension}`
+    })
+
+    const signedUrl = await getSignedUrl(this.s3Client, command, { expiresIn: expirationInSeconds })
+    return {
+      signedUrl,
+      publicUrl: this.stripQueryString(signedUrl)
+    }
+  }
+
+  public async createSignedDownloadUrl (bucketName: string, directory: string, fileName: string, expirationInSeconds: number): Promise<string> {
+    const command = new GetObjectCommand({
+      Bucket: bucketName,
+      Key: `${directory}/${fileName}`
+    })
+
+    return await getSignedUrl(this.s3Client, command, { expiresIn: expirationInSeconds })
+  }
+
+  private translateContentTypeToExtension (contentType: ContentType): string {
+    return {
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/png': 'png',
+      'application/pdf': 'pdf'
+    }[contentType]
+  }
+
+  private stripQueryString (urlString: string): string {
+    const url = new URL(urlString)
+    url.search = ''
+    return url.toString()
+  }
 }
+
+const possibleContentTypes = ['image/jpg', 'image/jpeg', 'image/png', 'application/pdf'] as const
+export type ContentType = typeof possibleContentTypes[number]
 
 export { z as cz } from 'zod'

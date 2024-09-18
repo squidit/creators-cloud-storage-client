@@ -62,10 +62,11 @@ __export(src_exports, {
 });
 module.exports = __toCommonJS(src_exports);
 var import_client_s3 = require("@aws-sdk/client-s3");
+var import_s3_request_presigner = require("@aws-sdk/s3-request-presigner");
 var import_util = require("util");
 var import_zlib = require("zlib");
 
-// ../../node_modules/.pnpm/zod@3.23.6/node_modules/zod/lib/index.mjs
+// ../../node_modules/.pnpm/zod@3.23.8/node_modules/zod/lib/index.mjs
 var util;
 (function(util2) {
   util2.assertEqual = (val) => val;
@@ -3880,6 +3881,9 @@ var z = /* @__PURE__ */ Object.freeze({
 var gzip = (0, import_util.promisify)(import_zlib.gzip);
 var CreatorsCloudStorageClient = class _CreatorsCloudStorageClient {
   constructor(region, accessKeyId, secretAccessKey, loggerInstance, errorConverter) {
+    this.region = region;
+    this.loggerInstance = loggerInstance;
+    this.errorConverter = errorConverter;
     this.loggerInstance = loggerInstance;
     this.errorConverter = errorConverter;
     this.s3Client = new import_client_s3.S3Client({
@@ -3929,9 +3933,6 @@ var CreatorsCloudStorageClient = class _CreatorsCloudStorageClient {
         };
         const command = new import_client_s3.GetObjectCommand(params);
         const response = yield this.s3Client.send(command);
-        if (!response) {
-          throw new Error("No response");
-        }
         console.debug(`Download of file ${fileName} from bucket ${bucketName} successful.`);
         return response;
       } catch (error) {
@@ -3943,9 +3944,6 @@ var CreatorsCloudStorageClient = class _CreatorsCloudStorageClient {
   downloadJson(bucketName, fileName, schema) {
     return __async(this, null, function* () {
       const downloadResult = yield this.downloadFile(bucketName, fileName);
-      if (!downloadResult.Body) {
-        throw new Error("No body in file content");
-      }
       if (!downloadResult.Body) {
         throw new Error("No body in file content");
       }
@@ -3971,6 +3969,36 @@ var CreatorsCloudStorageClient = class _CreatorsCloudStorageClient {
       const json = JSON.parse(jsonString);
       return schema.parse(json);
     });
+  }
+  createSignedUploadUrl(bucketName, directory, fileName, contentType, expirationInSeconds) {
+    return __async(this, null, function* () {
+      const extension = this.translateContentTypeToExtension(contentType);
+      const command = new import_client_s3.PutObjectCommand({
+        Bucket: bucketName,
+        Key: `${directory}/${fileName}.${extension}`
+      });
+      return {
+        signedUrl: yield (0, import_s3_request_presigner.getSignedUrl)(this.s3Client, command, { expiresIn: expirationInSeconds }),
+        publicUrl: `https://${bucketName}.s3.${this.region}.amazonaws.com/${directory}/${fileName}.${extension}`
+      };
+    });
+  }
+  createSignedDownloadUrl(bucketName, directory, fileName, expirationInSeconds) {
+    return __async(this, null, function* () {
+      const command = new import_client_s3.GetObjectCommand({
+        Bucket: bucketName,
+        Key: `${directory}/${fileName}`
+      });
+      return (0, import_s3_request_presigner.getSignedUrl)(this.s3Client, command, { expiresIn: expirationInSeconds });
+    });
+  }
+  translateContentTypeToExtension(contentType) {
+    return {
+      "image/jpeg": "jpg",
+      "image/jpg": "jpg",
+      "image/png": "png",
+      "application/pdf": "pdf"
+    }[contentType];
   }
 };
 // Annotate the CommonJS export names for ESM import in node:
