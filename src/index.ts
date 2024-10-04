@@ -45,7 +45,7 @@ export class CreatorsCloudStorageClient {
   }
 
   public static init(region: string, accessKeyId: string, secretAccessKey: string, loggerInstance: Logger, errorConverter: ErrorConverter): void {
-    this.instance = new CreatorsCloudStorageClient(region, accessKeyId, secretAccessKey, loggerInstance, errorConverter)
+    CreatorsCloudStorageClient.instance = new CreatorsCloudStorageClient(region, accessKeyId, secretAccessKey, loggerInstance, errorConverter)
   }
 
   public async uploadFromUrl(bucketName: string, path: string, fileName: string, originalUrl: string): Promise<string | null> {
