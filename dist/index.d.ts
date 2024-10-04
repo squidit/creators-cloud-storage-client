@@ -18,13 +18,14 @@ declare class CreatorsCloudStorageClient {
     static getInstance(): CreatorsCloudStorageClient;
     static init(region: string, accessKeyId: string, secretAccessKey: string, loggerInstance: Logger, errorConverter: ErrorConverter): void;
     uploadFromUrl(bucketName: string, path: string, fileName: string, originalUrl: string): Promise<string | null>;
-    isInBuckets(mediaUrl: string | null, configs: {
+    isInBuckets(mediaUrl: string | null | undefined, configs: {
         bucket: string;
         cloud: Cloud;
     } | Array<{
         bucket: string;
         cloud: Cloud;
-    }>): boolean;
+    }>): mediaUrl is string;
+    moveToBucket(currentUrl: string, targetBucketName: string): Promise<string>;
     isInBucket(cloud: 'aws' | 'gcp', bucket: string, mediaUrl: string | null | undefined): mediaUrl is string;
     private getFileExtensionFromUrl;
     uploadFile(bucketName: string, fileName: string, fileContent: Buffer, options?: {

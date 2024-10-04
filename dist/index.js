@@ -109,9 +109,6 @@ var CreatorsCloudStorageClient = class _CreatorsCloudStorageClient {
           Key: remoteFileKey
         }
       });
-      upload.on("httpUploadProgress", (progress) => {
-        import_node_console.default.debug(`Upload progress: ${JSON.stringify(progress, null, 2)}`);
-      });
       await upload.done();
       import_node_console.default.debug(`Upload of file ${fileName} to bucket ${bucketName} successful`);
       return `https://${bucketName}.s3.amazonaws.com/${remoteFileKey}`;
@@ -133,6 +130,21 @@ var CreatorsCloudStorageClient = class _CreatorsCloudStorageClient {
       }
     }
     return false;
+  }
+  async moveToBucket(currentUrl, targetBucketName) {
+    const url = new URL(currentUrl);
+    const currentBucketName = url.hostname.split(".")[0];
+    const fileKey = url.pathname.slice(1);
+    await this.s3Client.send(new import_client_s3.CopyObjectCommand({
+      Bucket: targetBucketName,
+      CopySource: `${currentBucketName}/${fileKey}`,
+      Key: fileKey
+    }));
+    await this.s3Client.send(new import_client_s3.DeleteObjectCommand({
+      Bucket: currentBucketName,
+      Key: fileKey
+    }));
+    return `https://${targetBucketName}.s3.amazonaws.com/${fileKey}`;
   }
   isInBucket(cloud, bucket, mediaUrl) {
     if (!mediaUrl) {

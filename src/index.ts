@@ -1,4 +1,4 @@
-import { GetObjectCommand, PutObjectCommand, S3Client, type GetObjectCommandInput, type GetObjectCommandOutput, type PutObjectCommandInput } from '@aws-sdk/client-s3'
+import { CopyObjectCommand, DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client, type GetObjectCommandInput, type GetObjectCommandOutput, type PutObjectCommandInput } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { type NodeJsClient } from '@smithy/types'
@@ -24,7 +24,7 @@ export class CreatorsCloudStorageClient {
   private static instance: CreatorsCloudStorageClient | undefined
   private readonly s3Client: NodeJsClient<S3Client>
 
-  private constructor(private readonly region: string, accessKeyId: string, secretAccessKey: string, private readonly loggerInstance: Logger, private readonly errorConverter: ErrorConverter) {
+  private constructor(region: string, accessKeyId: string, secretAccessKey: string, private readonly loggerInstance: Logger, private readonly errorConverter: ErrorConverter) {
     this.loggerInstance = loggerInstance
     this.errorConverter = errorConverter
     this.s3Client = new S3Client({
@@ -97,10 +97,6 @@ export class CreatorsCloudStorageClient {
         },
       })
 
-      upload.on('httpUploadProgress', (progress) => {
-        console.debug(`Upload progress: ${JSON.stringify(progress, null, 2)}`)
-      })
-
       await upload.done()
 
       console.debug(`Upload of file ${fileName} to bucket ${bucketName} successful`)
@@ -112,7 +108,7 @@ export class CreatorsCloudStorageClient {
     }
   }
 
-  public isInBuckets(mediaUrl: string | null, configs: { bucket: string, cloud: Cloud } | Array<{ bucket: string, cloud: Cloud }>): boolean {
+  public isInBuckets(mediaUrl: string | null | undefined, configs: { bucket: string, cloud: Cloud } | Array<{ bucket: string, cloud: Cloud }>): mediaUrl is string {
     if (!mediaUrl) {
       return false
     }
@@ -127,6 +123,26 @@ export class CreatorsCloudStorageClient {
     }
 
     return false
+  }
+
+  public async moveToBucket(currentUrl: string, targetBucketName: string): Promise<string> {
+    // extracts bucket and file key from the current aws url
+    const url = new URL(currentUrl)
+    const currentBucketName = url.hostname.split('.')[0]
+    const fileKey = url.pathname.slice(1)
+
+    await this.s3Client.send(new CopyObjectCommand({
+      Bucket: targetBucketName,
+      CopySource: `${currentBucketName}/${fileKey}`,
+      Key: fileKey,
+    }))
+
+    await this.s3Client.send(new DeleteObjectCommand({
+      Bucket: currentBucketName,
+      Key: fileKey,
+    }))
+
+    return `https://${targetBucketName}.s3.amazonaws.com/${fileKey}`
   }
 
   public isInBucket(cloud: 'aws' | 'gcp', bucket: string, mediaUrl: string | null | undefined): mediaUrl is string {

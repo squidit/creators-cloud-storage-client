@@ -1,5 +1,5 @@
 // src/index.ts
-import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { CopyObjectCommand, DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import mimeTypes from "mime-types";
@@ -74,9 +74,6 @@ var CreatorsCloudStorageClient = class _CreatorsCloudStorageClient {
           Key: remoteFileKey
         }
       });
-      upload.on("httpUploadProgress", (progress) => {
-        console.debug(`Upload progress: ${JSON.stringify(progress, null, 2)}`);
-      });
       await upload.done();
       console.debug(`Upload of file ${fileName} to bucket ${bucketName} successful`);
       return `https://${bucketName}.s3.amazonaws.com/${remoteFileKey}`;
@@ -98,6 +95,21 @@ var CreatorsCloudStorageClient = class _CreatorsCloudStorageClient {
       }
     }
     return false;
+  }
+  async moveToBucket(currentUrl, targetBucketName) {
+    const url = new URL(currentUrl);
+    const currentBucketName = url.hostname.split(".")[0];
+    const fileKey = url.pathname.slice(1);
+    await this.s3Client.send(new CopyObjectCommand({
+      Bucket: targetBucketName,
+      CopySource: `${currentBucketName}/${fileKey}`,
+      Key: fileKey
+    }));
+    await this.s3Client.send(new DeleteObjectCommand({
+      Bucket: currentBucketName,
+      Key: fileKey
+    }));
+    return `https://${targetBucketName}.s3.amazonaws.com/${fileKey}`;
   }
   isInBucket(cloud, bucket, mediaUrl) {
     if (!mediaUrl) {
