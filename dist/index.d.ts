@@ -1,5 +1,6 @@
 import { GetObjectCommandOutput } from '@aws-sdk/client-s3';
 
+type Cloud = 'aws' | 'gcp';
 interface Logger {
     Error: (dataToLog: Error | Record<string, unknown>, request?: unknown, response?: unknown, user?: string) => void;
     Info: (message: Record<string, unknown>) => void;
@@ -16,6 +17,16 @@ declare class CreatorsCloudStorageClient {
     private constructor();
     static getInstance(): CreatorsCloudStorageClient;
     static init(region: string, accessKeyId: string, secretAccessKey: string, loggerInstance: Logger, errorConverter: ErrorConverter): void;
+    uploadFromUrl(bucketName: string, path: string, fileName: string, originalUrl: string): Promise<string | null>;
+    isInBuckets(mediaUrl: string | null, configs: {
+        bucket: string;
+        cloud: Cloud;
+    } | Array<{
+        bucket: string;
+        cloud: Cloud;
+    }>): boolean;
+    isInBucket(cloud: 'aws' | 'gcp', bucket: string, mediaUrl: string | null | undefined): mediaUrl is string;
+    private getFileExtensionFromUrl;
     uploadFile(bucketName: string, fileName: string, fileContent: Buffer, options?: {
         compress?: boolean;
     }): Promise<void>;
@@ -31,4 +42,4 @@ declare class CreatorsCloudStorageClient {
 declare const possibleContentTypes: readonly ["image/jpg", "image/jpeg", "image/png", "application/pdf"];
 type ContentType = typeof possibleContentTypes[number];
 
-export { type ContentType, CreatorsCloudStorageClient, possibleContentTypes };
+export { type Cloud, type ContentType, CreatorsCloudStorageClient, possibleContentTypes };
