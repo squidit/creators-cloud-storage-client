@@ -9,7 +9,6 @@ interface ErrorConverter {
     Create: (settings: Record<string, unknown>, originalError: unknown) => Error;
 }
 declare class CreatorsCloudStorageClient {
-    private readonly region;
     private readonly loggerInstance;
     private readonly errorConverter;
     private static instance;

@@ -157,7 +157,7 @@ export class CreatorsCloudStorageClient {
         break
       }
       case 'gcp': {
-        cloudUrl = `https://storage.googleapis.com/${bucket}`
+        cloudUrl = `https://storage.googleapis.com/${bucket}/`
         break
       }
       default: {

@@ -45,7 +45,6 @@ var import_node_zlib = require("zlib");
 var gzip = (0, import_node_util.promisify)(import_node_zlib.gzip);
 var CreatorsCloudStorageClient = class _CreatorsCloudStorageClient {
   constructor(region, accessKeyId, secretAccessKey, loggerInstance, errorConverter) {
-    this.region = region;
     this.loggerInstance = loggerInstance;
     this.errorConverter = errorConverter;
     this.loggerInstance = loggerInstance;
@@ -67,7 +66,7 @@ var CreatorsCloudStorageClient = class _CreatorsCloudStorageClient {
     return _CreatorsCloudStorageClient.instance;
   }
   static init(region, accessKeyId, secretAccessKey, loggerInstance, errorConverter) {
-    this.instance = new _CreatorsCloudStorageClient(region, accessKeyId, secretAccessKey, loggerInstance, errorConverter);
+    _CreatorsCloudStorageClient.instance = new _CreatorsCloudStorageClient(region, accessKeyId, secretAccessKey, loggerInstance, errorConverter);
   }
   async uploadFromUrl(bucketName, path2, fileName, originalUrl) {
     try {
@@ -157,7 +156,7 @@ var CreatorsCloudStorageClient = class _CreatorsCloudStorageClient {
         break;
       }
       case "gcp": {
-        cloudUrl = `https://storage.googleapis.com/${bucket}`;
+        cloudUrl = `https://storage.googleapis.com/${bucket}/`;
         break;
       }
       default: {
